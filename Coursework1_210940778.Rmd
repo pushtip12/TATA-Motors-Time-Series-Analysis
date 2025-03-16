@@ -1,0 +1,288 @@
+---
+title: "MTH6139 Time Series" 
+subtitle: "Coursework 1 -- Template" 
+author: "Pushti Rajnikant Patel (210940778)" 
+date: "Spring term 2025" 
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: spacelab 
+    highlight: tango
+---
+ 
+```{r, echo=FALSE}
+# This code will display the QMUL logo at the top right of the page
+# Do not change this code
+htmltools::img(src = knitr::image_uri("images/QMlogo.png"),
+               alt = 'logo',
+               style = 'position:absolute; top:0; right:0; padding:10px; width:20%;')
+```
+
+# Section 1: This is the first section
+title: "MTH6139 Time Series" 
+subtitle: "Coursework 1 -- Template" 
+author: "Pushti Rajnikant Patel (210940778)" 
+date: "Spring term 2025" 
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: spacelab 
+    highlight: tango
+---
+ 
+```{r, echo=FALSE}
+# This code will display the QMUL logo at the top right of the page
+# Do not change this code
+htmltools::img(src = knitr::image_uri("images/QMlogo.png"),
+               alt = 'logo',
+               style = 'position:absolute; top:0; right:0; padding:10px; width:20%;')
+```
+
+
+## 1 Introduction
+
+Understanding stock market trends is crucial for investors and businesses. This report analyzes **Tata Motors'** historical stock prices and employs **Meta's Prophet forecasting model** to predict future movements.
+
+Numerous factors, such as investor sentiment, economic conditions, seasonality, and market movements, affect stock prices. We can identify patterns and generate data-driven predictions by utilising Prophet, an advanced time series forecasting tool.
+
+We will **visualise historical stock data** to identify key patterns, **apply Prophet's forecasting model** to project future prices, **analyse trends and seasonality** to gain financial insights and **evaluate model accuracy** by comparing actual vs. predicted values.
+
+## 2️ Data loading and preparation
+
+We must load and prepare the dataset before we can examine or predict the values of Tata Motors' stocks. This stage guarantees that our data is clear, organised, and prepared for Prophet model analysis.
+
+#### Load Required Libraries
+
+```{r}
+library(prophet)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(readr)   
+library(plotly)  
+```
+
+#### Load Data
+
+```{r}
+# Set Working Directory 
+setwd("~/Desktop/Coursework1Template")
+
+# Load Tata Motors Stock Data
+data <- read_csv("TATAMOTORS.NS.csv")
+
+# View First Few Rows
+head(data)
+
+# Convert Date Column to Date Format
+data <- data %>%
+    mutate(Date = as.Date(Date, format="%Y-%m-%d"))
+
+# Ensure Close price is numeric 
+df <- data %>%
+    select(Date, Close) %>%
+    rename(ds = Date, y = Close) %>% # ds is Date of stock price, y is Closing stock price for day
+    mutate(y = as.numeric(y)) %>%   # Convert to numeric
+    filter(!is.na(y))                # Remove rows where Close price is NA
+
+# Display First Few Rows
+head(df)
+```
+
+### Explanatory Data Analysis
+
+#### Plot Raw Closing Prices Over Time
+
+```{r}
+ggplot(df, aes(x=ds, y=y)) +
+    geom_line(color="blue") +
+    labs(title="Tata Motors Stock Prices Over Time", x="Date", y="Closing Price") +
+    theme_minimal()
+```
+
+ Observations from the Chart:
+ 
+ This graph displays Tata Motors' closing stock prices over time, helping us understand overall price movements before forecasting. The high volatility in prices suggests frequent fluctuations, which could be due to market conditions, investor sentiment, or earnings reports. The dense blue lines indicate that stock prices vary significantly rather than following a smooth trend. Some gaps or drops might be due to missing data or market closures. This visualization is crucial in data preparation, as it highlights irregularities that need cleaning before using the Prophet model for accurate predictions.
+ 
+ 
+## 3 Understanding trends with linear regression
+
+To establish a baseline understanding of Tata Motors' stock price growth, let’s apply a simple linear regression model.
+
+```{r}
+lm_model <- lm(y ~ ds, data=df)
+summary(lm_model)
+```
+
+Key Insights:
+
+The slope of the regression model indicates long-term growth or decline.
+
+The R-squared value shows how well the trend explains the stock’s movements.
+
+### Visualizing the Linear Trend
+
+```{r}
+ggplot(df, aes(x=ds, y=y)) +
+    geom_line(color="blue") +
+    geom_smooth(method="lm", col="red", se=FALSE) +
+    labs(title="Tata Motors Stock Prices with Linear Trend", x="Date", y="Stock Price") +
+    theme_minimal()
+```
+
+## 4 Prophet Model for Stock forecasting
+
+### 4.1 Basic Prophet Model
+
+```{r}
+#Initialise Basic Prophet Model
+model_basic <- prophet(df)
+
+#Create Future DataFrame (Next 180 Days)
+future_basic <- make_future_dataframe(model_basic, periods = 180)
+
+#Generate Forecast
+forecast_basic <- predict(model_basic, future_basic)
+
+#Plot Basic Forecasted Results
+plot(model_basic, forecast_basic)
+```
+
+Interpretation:
+
+The Basic Prophet Model forecast for Tata Motors' stock prices shows a **blue line** representing the **predicted trend** and a **shaded blue area** indicating the **confidence interval**. The **black dots** indicating **actual stock price**, show severe variations and high volatility, indicating that while the model is able to capture the general trend, it is unable to account for abrupt changes in the market. The forecasts stay largely consistent, which can suggest that the model is depending more on long-term patterns than reacting to short-term price swings. For improved accuracy, more tweaking (such as seasonality changes) would be required which is not captured by the basic model.
+
+
+### 4.2 Advanced prophet model with seasonality
+
+ To improve accuracy, we enable yearly and weekly seasonality, which accounts for recurring patterns in stock price movements.
+ 
+```{r}
+# Initialise Advanced Prophet Model
+model_advanced <- prophet(
+    df,
+    yearly.seasonality = TRUE,
+    weekly.seasonality = TRUE,
+    daily.seasonality = FALSE,
+    n.changepoints = 5
+)
+# Create Future DataFrame (Next 180 Days)
+future_advanced <- make_future_dataframe(model_advanced, periods = 180)
+
+# Generate Forecast
+forecast_advanced <- predict(model_advanced, future_advanced)
+
+# Plot Advanced Forecast
+plot(model_advanced, forecast_advanced)
+```
+
+The advanced model better captures stock movements by considering seasonality effects.
+Short-term fluctuations are now reflected more effectively.
+
+However, the graphs of the Basic Prophet Model and Advanced Prophet Model with Seasonality for Tata Motors are similar due to the fact that Prophet automatically detects yearly seasonality when the dataset encompasses multiple years. The forecast is not substantially altered by the inclusion of explicit seasonality, as Tata Motors' stock is more influenced by long-term trends and market events than by seasonal patterns. In essence, the stock's movements are more trend-driven than seasonal, which is why both models yield virtually identical results.
+
+
+# 5 Trend and seasonality analysis
+
+Prophet allows us to decompose stock prices into trends and seasonal patterns.
+
+```{r}
+# Prophet Components Plot (Trend, Seasonality, Holidays)
+prophet_plot_components(model_advanced, forecast_advanced)
+```
+
+Interpretation:
+
+*Trend Analysis*:  The top graph shows a gradual downward trend, indicating a slight decline in Tata Motors' stock prices over time. This could be due to market fluctuations, investor sentiment, or external economic conditions.
+
+*Weekly Seasonality*: According to the middle graph, stock prices often exhibit lower values on Mondays and Saturdays and higher values on Wednesdays and Fridays. This pattern could be linked to trading activity and market sentiment.
+
+*Yearly Seasonality*: The bottom graph shows the stock price peaks around April and December, indicating that price changes during these times are influenced by seasonal factors, corporate earnings releases, or macroeconomic developments.
+
+*Holiday Effects*: External factors influencing stock movement.
+
+# 6 Model evaluation: Actual vs Predicted
+
+A key part of any forecasting model is validating its predictions against real data.
+```{r}
+# Merge Actual Data with Predicted Values
+comparison <- forecast_advanced %>%
+    select(ds, yhat, yhat_lower, yhat_upper) %>%
+    inner_join(df, by="ds")
+
+# Plot Actual vs Predicted Stock Prices
+ggplot(comparison, aes(x=ds)) +
+    geom_line(aes(y=y, color="Actual"), linewidth=1) +
+    geom_line(aes(y=yhat, color="Predicted"), linewidth=1, linetype="dashed") +
+    labs(title="Tata Motors: Actual vs Predicted Stock Prices",
+         x="Date", y="Stock Price") +
+    theme_minimal() +
+    scale_color_manual(values=c("blue", "red"))
+```
+
+Evaluation:
+
+-The predicted values closely follow actual stock movements, indicating a good model fit.
+
+-Some deviations exist, likely due to market volatility or external economic factors.
+
+The actual prices (blue) on the Actual vs. Predicted Stock Prices graph exhibit extreme volatility, with frequent spikes and fluctuations. The projected values (red dashed line), on the other hand, are more stable and smooth, suggesting that the model has successfully captured the general trend but has trouble with sharp price swings. Due to market volatility, earnings announcements, or outside economic reasons, Prophet's projection appears to underestimate stock price movements, as evidenced by the significant discrepancy between actual and forecasted values.  Short-term price fluctuations are not fully captured by the model, despite the fact that it generally follows the pattern.
+
+
+
+# Conclusion
+
+This project used Meta's Prophet model to deliver insightful information about the behaviour of Tata Motors' stock price. Using forecasting, trend analysis, and seasonality recognition, we found the following important conclusions:
+
+Stock Price Trend: The long-term trend points to a modest decline, suggesting that macroeconomic factors, firm performance, and external market conditions have a greater impact on stock prices than internal trends.
+
+Effects of Seasonality: The weekly seasonality research revealed that, maybe as a result of investor trading behaviour, stock activity was lower on Mondays and Saturdays and higher on Wednesdays and Fridays. Peaks around April and December were found in annual trends, indicating price fluctuations related to financial reports or seasonal demand.
+
+Model Accuracy & Limitations: The Basic Prophet model did a decent work of capturing general market trends, but it had trouble with short-term swings and extreme volatility. The impact of market developments, changes in the economy, and investor emotion was highlighted by the fact that actual stock prices were more unpredictable than the model predicted.
+
+Although other aspects like macroeconomic trends and corporate profitability should also be taken into account, this model is an excellent spot to start when analysing stock prices. Besides, even though Prophet offers a solid basis for stock forecasting, market conditions are still very unpredictable. This project gives investors a more comprehensive understanding of Tata Motors' stock performance and future trends by highlighting the significance of data-driven decision-making.
+
+# Section 2: This is the second section
+
+## Prophet's Mathematical Breakdown
+
+The following mathematical elements form the core of the Prophet time-series forecasting model in R:
+This is an inline equation: $y(t) = g(t) + s(t) + h(t) + \epsilon_t$
+
+where in:
+
+g(t) = Trend function (modeled as piecewise linear growth)
+$$
+g(t) = (k + a(t)^T \delta) t + (m + a(t)^T \gamma)
+$$
+
+s(t) = Seasonality function (modeled using Fourier series)
+$$
+s(t) = \sum_{n=1}^{N} \left( a_n \cos \left(\frac{2\pi n t}{P} \right) + b_n \sin \left(\frac{2\pi n t}{P} \right) \right)
+$$
+
+and 
+
+h(t) = Holiday effects (event-based fluctuations)
+$$
+h(t) = \sum_i \beta_i d_i(t)
+$$
+
+ϵt​= Random noise (unpredictable market movements)
+
+## Tata Motor's Logo
+
+![](images/TataMotorsLogo.png)
+
+
+# References
+
+- Prophet Forecasting Model: https://facebook.github.io/prophet/docs/quick_start.html⃣
+- MoneyControl: Tata Motors Stock History: https://www.moneycontrol.com/
+- Tata Motors Annual Reports: https://www.tatamotors.com/investors/
+- Economic Times: Stock Market Analysis: https://economictimes.indiatimes.com/
+- Facebook Prophet Documentation: https://facebook.github.io/prophet/
+- R Markdown Guide: https://rmarkdown.rstudio.com/
+- Tata Motors Market Analysis: https://www.moneycontrol.com/
