@@ -1,2 +1,5 @@
 # TATA-Motors-Time-Series-Analysis
 This project focuses on analyzing Tata Motors' stock prices using time series analysis in R Studio.
+Time series analysis in R Studio is being used in this project to examine the past stock values of Tata Motors.  Using Meta's Prophet model to predict future prices, the goal is to identify trends, seasonal patterns, and variations in the stock data.
+The first step in the process is gathering data and preparing it to make sure it is clean and ready for analysis. Visualisation approaches then aid in the identification of seasonality and underlying tendencies. The Prophet Model test and other stationarity tests are used to determine whether the time series need alteration in order to improve forecasting.
+Meta created the Prophet model, which is used to make predictions since it works well with missing numbers, trend changes, and seasonality elements. Following training, performance measurements such as Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE) are used to assess the model's forecasting accuracy.
